@@ -13,9 +13,9 @@ from pyrogram.enums import ChatAction
 # =========================
 # CONFIG
 # =========================
-API_ID = int(os.getenv("API_ID", "0"))
-API_HASH = os.getenv("API_HASH", "").strip()
-SESSION = os.getenv("SESSION", "ubot")  # bisa string session / file session
+API_ID = int(os.getenv("API_ID", "35221249"))
+API_HASH = os.getenv("API_HASH", "dba49615214f03d9f5a9a3beb83fb7b2").strip()
+SESSION = os.getenv("SESSION", "BQIZbwEACQgbeX7O7kt8hAREitSHc2qutSI8GyVCcm516Xahck7JVUe-tlDq2_hw8_F_jFiSSPshN08dBcd2EKel4YluMBOutB7sp5Lgs-kesRKu666JhNfij9MnrRzZZVUjZPRGAwwpbD0VJ3gim_ubueK98zBSLfFL8uAebGfQVEhv2-NlYQQPlns7848TZfjzdLYVv5xwxAgdJvUBPdNrnT3O-C9jFKLx5cJMFFC-32KoLmEmAEXh9LO9cbuauBqBINRrdvcKqZUao5WbLG5xRy00YqHHTBcIhDDzRIXaGJyC4D0PY6lS1Q5QdvbZVXwZEVnjzq2nxgTHwWNf1cTJigcBAQAAAAByFkXYAA")  # bisa string session / file session
 if not API_ID or not API_HASH:
     raise SystemExit("ENV API_ID/API_HASH belum diisi.")
 
