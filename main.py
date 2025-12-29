@@ -15,7 +15,8 @@ from pyrogram.enums import ChatAction
 # =========================
 API_ID = int(os.getenv("API_ID", "35221249"))
 API_HASH = os.getenv("API_HASH", "dba49615214f03d9f5a9a3beb83fb7b2").strip()
-SESSION = os.getenv("SESSION", "ubotse")  # bisa string session / file session
+SESSION = os.getenv("SESSION", "ubotse").strip()  # file session name
+
 if not API_ID or not API_HASH:
     raise SystemExit("ENV API_ID/API_HASH belum diisi.")
 
@@ -151,6 +152,7 @@ async def call_siputzx(prompt: str, role: str) -> Optional[str]:
             if r.status != 200:
                 log.warning("Siputzx fallback non-200: %s %s", r.status, raw[:200])
                 return None
+
             js = json.loads(raw)
             if isinstance(js, dict):
                 data_obj = js.get("data")
@@ -172,19 +174,23 @@ async def call_siputzx(prompt: str, role: str) -> Optional[str]:
 # =========================
 app = Client(SESSION, api_id=API_ID, api_hash=API_HASH)
 
-@app.on_message(filters.command("start") & filters.me)
+@app.on_message(filters.command("start", prefixes=".") & filters.me)
 async def start_cmd(_, m):
     await m.reply_text(
         "On.\n\n"
-        "• .chat on|off\n"
+        "• .chat on|off (grup saja)\n"
         "• .setrole <teks>\n"
         "• .role"
     )
 
 @app.on_message(filters.command("chat", prefixes=".") & filters.me)
 async def chat_cmd(_, m):
+    # Batasi hanya group/supergroup
+    if m.chat and m.chat.type not in ("group", "supergroup"):
+        return await m.reply_text("Pakai di grup aja.")
+
     cfg = get_chat_cfg(m.chat.id)
-    parts = m.text.split(maxsplit=1)
+    parts = (m.text or "").split(maxsplit=1)
     arg = (parts[1].strip().lower() if len(parts) > 1 else "")
     if arg not in ("on", "off"):
         return await m.reply_text("Pakai: .chat on atau .chat off")
@@ -195,8 +201,11 @@ async def chat_cmd(_, m):
 
 @app.on_message(filters.command("setrole", prefixes=".") & filters.me)
 async def setrole_cmd(_, m):
+    if m.chat and m.chat.type not in ("group", "supergroup"):
+        return await m.reply_text("Pakai di grup aja.")
+
     cfg = get_chat_cfg(m.chat.id)
-    parts = m.text.split(maxsplit=1)
+    parts = (m.text or "").split(maxsplit=1)
     role = (parts[1].strip() if len(parts) > 1 else "")
     if not role:
         return await m.reply_text("Pakai: .setrole ...")
@@ -207,37 +216,39 @@ async def setrole_cmd(_, m):
 
 @app.on_message(filters.command("role", prefixes=".") & filters.me)
 async def role_cmd(_, m):
+    if m.chat and m.chat.type not in ("group", "supergroup"):
+        return await m.reply_text("Pakai di grup aja.")
+
     cfg = get_chat_cfg(m.chat.id)
     role = cfg.get("role") or DEFAULT_ROLE
     await m.reply_text(f"Role:\n\n{role}")
 
-@app.on_message(filters.text | filters.caption)
+# Hanya proses pesan di group/supergroup
+@app.on_message((filters.group | filters.supergroup) & (filters.text | filters.caption))
 async def handle_message(client: Client, m):
     if not m.chat:
         return
 
     cfg = get_chat_cfg(m.chat.id)
 
+    # KETAT: kalau grup belum di-ON, jangan respon apa pun (bukan global)
+    if not cfg.get("enabled", False):
+        return
+
     # Auto delete mention (abaikan pesan dari diri sendiri)
     text = (m.text or m.caption or "").strip()
-    if text and not m.from_user.is_self and MENTION_REGEX.search(text):
+    if not text:
+        return
+
+    if m.from_user and m.from_user.is_self:
+        return
+
+    if MENTION_REGEX.search(text):
         try:
             await m.delete()
             return
         except Exception:
-            # bukan admin / gak punya hak delete
             pass
-
-    if not text:
-        return
-
-    # hanya jawab kalau .chat on ATAU user reply ke kamu
-    replied_to_me = False
-    if m.reply_to_message and m.reply_to_message.from_user:
-        replied_to_me = bool(m.reply_to_message.from_user.is_self)
-
-    if not replied_to_me and not cfg.get("enabled", False):
-        return
 
     await client.send_chat_action(m.chat.id, ChatAction.TYPING)
 
@@ -263,8 +274,6 @@ def main():
     load_data()
     log.info("Ubot running...")
     app.run()
-    # kalau kamu stop pakai KeyboardInterrupt, session akan keburu mati;
-    # untuk rapih bisa panggil _shutdown via loop kalau perlu.
 
 if __name__ == "__main__":
     main()
