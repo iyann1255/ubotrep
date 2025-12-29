@@ -224,9 +224,9 @@ async def role_cmd(_, m):
     await m.reply_text(f"Role:\n\n{role}")
 
 # Hanya proses pesan di group/supergroup
-@app.on_message((filters.group | filters.supergroup) & (filters.text | filters.caption))
+@app.on_message((filters.text | filters.caption))
 async def handle_message(client: Client, m):
-    if not m.chat:
+    if not m.chat or m.chat.type not in ("group", "supergroup"):
         return
 
     cfg = get_chat_cfg(m.chat.id)
